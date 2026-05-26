@@ -143,8 +143,8 @@ graph TD
 
 ## 六、信息非冗余性核对表
 
-| 新增点 | 与已有组件的关系 | 是否冗余 |
-| --- | --- | --- |
+| 新增点 | 与已有组件的关系 | 是否冗余 | 收益 |
+| --- | --- | --- | --- |
 | TargetAttnBias | 加在 cross-attn softmax 之前，alpha 初值 0 | ✅ 不冗余 | +1.5k |
 | DIN 残差 | 加在 logits 输入向量（输出残差），位置与 attn bias 不重合 | ✅ 不冗余 | +2k |
 | CalendarEmbedding | 绝对时间维度，RoPE 是相对维度 | ✅ 不冗余 | +9k|
@@ -157,3 +157,6 @@ graph TD
 
 ---
 相对baseline共新增 **16 个优化点**，覆盖 **target prior 注入（方案A + DIN）**、**多任务对比学习（候选 InfoNCE + history hard-neg + SupCon）**、**EMA + 双优化器 + cosine 训练范式**、**AMP / flash-attn / compile 系统加速**
+
+## 其余尝试
+### 1.对高覆盖率、中低基数的特征配置不同emb size。2.显示交叉特征的引入。3.尝试引入global token。3.尝试利用label_time构造归因数据的利用。4.对序列domain各自构造时间分桶。5.序列时间特征的构造。6.对ns-token进行加权。7.分离更多的token。8.更多的时间特征工程。9.query复杂化。10.更换模型结构。11.引入dcn网络。
