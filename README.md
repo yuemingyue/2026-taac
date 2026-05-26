@@ -145,15 +145,15 @@ graph TD
 
 | 新增点 | 与已有组件的关系 | 是否冗余 |
 | --- | --- | --- |
-| TargetAttnBias | 加在 cross-attn softmax 之前，alpha 初值 0 | ✅ 不冗余 | +1.5k 
-| DIN 残差 | 加在 logits 输入向量（输出残差），位置与 attn bias 不重合 | ✅ 不冗余 | +2k 
-| CalendarEmbedding | 绝对时间维度，RoPE 是相对维度 | ✅ 不冗余 | +9k
-| UserDense 分组 | 是已有通路的内部升级 | ⚠️ 替代关系 | +5k
-| AuxProjHead | 独立子空间，不共享 logit head 参数 | ✅ 不冗余 | +1k
-| listwise InfoNCE | 主任务仍是 BCE，InfoNCE 是辅助加权项 | ✅ 不冗余 | +1.5k
-| SupCon | 样本级，与 pair 级 InfoNCE 不重叠 | ✅ 不冗余 |
-| EMA | 只对 dense，不动 sparse | ✅ 不冗余 | +0.5k
-| Flash-attn varlen | 替换原 SDPA kernel，等价计算更快 | ⚠️ 替代关系 |
+| TargetAttnBias | 加在 cross-attn softmax 之前，alpha 初值 0 | ✅ 不冗余 | +1.5k |
+| DIN 残差 | 加在 logits 输入向量（输出残差），位置与 attn bias 不重合 | ✅ 不冗余 | +2k |
+| CalendarEmbedding | 绝对时间维度，RoPE 是相对维度 | ✅ 不冗余 | +9k|
+| UserDense 分组 | 是已有通路的内部升级 | ⚠️ 替代关系 | +5k|
+| AuxProjHead | 独立子空间，不共享 logit head 参数 | ✅ 不冗余 | +1k|
+| listwise InfoNCE | 主任务仍是 BCE，InfoNCE 是辅助加权项 | ✅ 不冗余 | +1.5k|
+| SupCon | 样本级，与 pair 级 InfoNCE 不重叠 | ✅ 不冗余 |  |
+| EMA | 只对 dense，不动 sparse | ✅ 不冗余 | +0.5k|
+| Flash-attn varlen | 替换原 SDPA kernel，等价计算更快 | ⚠️ 替代关系 |  |
 
 ---
 相对baseline共新增 **16 个优化点**，覆盖 **target prior 注入（方案A + DIN）**、**多任务对比学习（候选 InfoNCE + history hard-neg + SupCon）**、**EMA + 双优化器 + cosine 训练范式**、**AMP / flash-attn / compile 系统加速**
