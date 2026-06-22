@@ -15,31 +15,26 @@
 - **关键实现**：
   - `alpha = nn.Parameter(0.0)` learnable 门控 → 训练初期完全退化为基线，安全无害；
   - bf16 amp 下不出现 NaN（旧的 `ImportanceWeightedQueryGenerator` 序列原地重写方案在 amp 下会 NaN，已被本方案取代）。
-- **不冗余性**：DIN 是 *输出* 残差、cross-attn 本体是自由学习的 attention、本方案是 *输入侧* 加性 prior —— 三者作用位置不同。
 
 ### 2. DIN 兴趣激活残差
 - **新增组件**：`DINQueryBuilder`（L1456）+ `DINInterestActivation`（L1490）+ `--use_din --din_top_k --din_hidden_mult`
 - **解决问题**：HyFormer 输出向量缺乏 "对当前 target 的兴趣浓度" 这一显式信号。
 - **怎么做**：用 item_ns + item_dense 拼成 target query，在每个 domain 的 top-K 历史行为上做 attention pooling，作为 **输出层残差** 加到 logits 输入向量上。
-- **不冗余性**：DIN 走输出残差（output += DIN(target, seq)），与方案 A 走 attention 输入 bias 的位置不重叠，二者可叠加增益。
 
 ### 3. Calendar 绝对时间嵌入
 - **新增组件**：`CalendarTimeEmbedding`（L1351）+ dataset 端 `_build_calendar_int_feats` + `--use_time_feats`
 - **解决问题**：右侧只用 RoPE 编码相对位置，缺乏"周末/早晚高峰/节假日"等绝对时间先验。
 - **怎么做**：把 unix 秒戳拆成 9 列 UTC+8 日历 ID（year/month/day/hour/minute/weekday/week_of_year/quarter/...），各自独立 embedding 后拼接 + LayerNorm，注入 NS token。
-- **不冗余性**：RoPE = 相对位置；time_bucket = domain 内桶化序列位置；CalendarEmbedding = 绝对挂历语义 —— 三者编码不同时间维度。
 
 ### 4. User Dense 分组投影
 - **新增组件**：`UserDenseGroupedProjector`（L1385）+ `--user_dense_grouped`
 - **解决问题**：右侧 user_dense 走单一大 MLP，把语义异构的 dense 特征（属性 / 兴趣 / 统计 / 行为聚合）强制混在一个权重里。
 - **怎么做**：按语义分组，每组独立 MLP → d_model，再拼接 + LayerNorm。
-- **不冗余性**：是对 *已有 user_dense 通路* 的替换性升级，不引入新信息源。
 
 ### 5. Auxiliary 投影头三件套
 - **新增组件**：`AuxProjHead`（L1822），在主模型里实例化 `aux_user_head / aux_item_head / aux_sample_head` + `aux_rank_scale`
 - **解决问题**：对比学习需要在独立子空间计算余弦相似度，不能直接用主任务的 logit head。
 - **怎么做**：2 层 MLP + LayerNorm + L2-norm 投到 `aux_proj_dim`；`aux_rank_scale = nn.Parameter(0.0)` 让 InfoNCE 的尺度端到端可学。
-- **不冗余性**：与主任务 `clsfier` 完全解耦，用独立参数空间承载对比信号。
 
 ---
 
@@ -49,7 +44,7 @@
 - **位置**：[PCVRHyFormer.forward_with_aux L2601](file:///Users/yueming/CodeBuddy/taac/【0.833830】taac-infonce优化/model.py)
 - **解决问题**：朴素做法是主任务跑一次 backbone、对比任务再跑一次，显存与时间翻倍。
 - **怎么做**：训练时一次前向同时返回 `(logits, u_repr, i_repr, s_repr, position_aux={seq_repr_list, seq_mask_list})`，所有对比损失共用同一组 backbone 表征。
-- **不冗余性**：推理时走原 `forward()`，aux 头不参与，无推理开销。
+
 
 ### 7. listwise_rank_infonce_loss：候选 + in-batch + history hard-neg 三合一
 - **位置**：[utils.py L507](file:///Users/yueming/CodeBuddy/taac/【0.833830】taac-infonce优化/utils.py)
@@ -60,7 +55,6 @@
   - `pos_weight=2.0` 提升正样本梯度权重
   - 数值安全：温度下界 1e-6、in-batch 自身位置 mask 为 -1e9
 - **CLI**：`--use_aux_loss --aux_candidate_count --aux_temperature --aux_positive_weight --aux_history_weight --aux_history_max_per_sample --aux_history_pos_weight --aux_history_domain`
-- **不冗余性**：主任务还是 BCE/Focal，InfoNCE 是 *额外的* 排序信号，权重 0.1 加权融合。
 
 ### 8. supcon_loss：样本级监督对比
 - **位置**：[utils.py L603](file:///Users/yueming/CodeBuddy/taac/【0.833830】taac-infonce优化/utils.py)
